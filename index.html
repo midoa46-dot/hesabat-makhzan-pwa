@@ -245,6 +245,48 @@ nav.tabs button[aria-current="page"]{background:linear-gradient(145deg,#1b765f,#
 @media(hover:hover){.stat:hover,.pc:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}.item:not(.void):hover{background:var(--accent-soft)}}
 @media(prefers-reduced-motion:no-preference){.brandbar,.hero,.card,.stat,.pc{animation:soft-in .32s ease both}@keyframes soft-in{from{opacity:.82;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}}
 @media(max-width:380px){.syslight{font-size:8.5px}.brandbar{padding:11px 12px}.brandmark .brandicon{width:39px;height:39px}.top{gap:7px}.tb{gap:5px}.btn.sm{padding:0 9px}}
+
+/* Desktop & wide-laptop responsive layout */
+@media (min-width:768px){
+ body{padding-left:clamp(24px,3vw,56px);padding-right:clamp(24px,3vw,56px)}
+ #app{width:100%;max-width:1120px;padding-top:24px;padding-bottom:132px}
+ .brandbar{padding:17px 22px;margin-bottom:22px;border-radius:20px}
+ .brandmark .brandicon{width:48px;height:48px}
+ .brandmark strong{font-size:17px}.brandmark small{font-size:10px}
+ .syslight{font-size:11px}.top{margin-bottom:20px}
+ h1{font-size:28px}h2{font-size:16px;margin-top:30px;margin-bottom:13px}
+ .hero{padding:27px 28px 22px;border-radius:22px}
+ .hero .lbl{font-size:14px}.hero .big{font-size:clamp(38px,4vw,48px);margin:7px 0 18px}
+ .split{gap:28px;padding-top:16px}.split dt{font-size:13px}.split dd{font-size:18px}
+ .pair{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:16px 0}
+ .stat{padding:17px 18px;border-radius:16px}.stat .lbl{font-size:13px}.stat .val{font-size:21px}
+ .card{padding:20px 22px}.pc{padding:16px 18px 18px;margin-bottom:14px}.pc .nm{font-size:17px}
+ .tri{gap:14px;margin:10px 0 13px}.tri .k{font-size:12px}.tri .v{font-size:16px}
+ .item{padding:16px 19px}.item .t,.item .amt{font-size:15px}.item .s{font-size:13px}
+ .btn{min-height:49px;padding-inline:22px}.btns{gap:12px;margin:17px 0}
+ nav.tabs .in{max-width:900px;padding:7px;gap:5px;border-radius:23px}
+ nav.tabs button{min-height:58px;font-size:13px}nav.tabs .ic{width:23px;height:23px}
+ .sheet-wrap{align-items:center;padding:24px}
+ .sheet{width:min(100%,720px);max-width:720px;max-height:min(88vh,820px);border-radius:22px;padding:24px 28px}
+ .sheet h3{font-size:21px;margin-bottom:18px}
+ .toast{bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+}
+@media (min-width:1200px){
+ #app{max-width:1360px;padding-top:30px}
+ body{padding-left:clamp(40px,4vw,84px);padding-right:clamp(40px,4vw,84px)}
+ .brandbar{padding:19px 26px}.hero{padding:32px 34px 26px}
+ .hero .big{font-size:50px}.pair{gap:18px}.stat{padding:20px 22px}
+ .card{padding:23px 26px}.pc{padding:18px 22px 20px}
+ .btns{max-width:900px}nav.tabs .in{max-width:1040px}
+ nav.tabs button{min-height:62px;font-size:13.5px}
+ .sheet{max-width:780px;width:min(100%,780px)}
+}
+@media (min-width:1600px){
+ #app{max-width:1480px}.pair{gap:20px}
+ .hero{padding:36px 40px 30px}.hero .big{font-size:54px}
+ .stat .val{font-size:23px}nav.tabs .in{max-width:1120px}
+}
+
 </style></head><body>
 <script>
 (function(){
