@@ -324,6 +324,44 @@ nav.tabs button[aria-current="page"]{background:linear-gradient(145deg,#1b765f,#
  nav.tabs button{min-height:56px}
 }
 
+
+/* User-selectable appearance and navigation */
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="vibrant"]{
+ color-scheme:light;--bg:#f4f6ff;--surface:#fff;--line:#dfe3f4;--ink:#252b4a;--muted:#70799b;
+ --accent:#6757d9;--on-accent:#fff;--accent-soft:#eeebff;--good:#188b78;--danger:#c34f70;--danger-soft:#fff0f4;
+ --shadow-sm:0 3px 14px rgba(65,57,145,.07);--shadow-md:0 10px 28px rgba(65,57,145,.12)
+}
+:root[data-theme="vibrant"] .hero{background:linear-gradient(132deg,#6e5ce4 0%,#5545c2 58%,#3e3a9f 100%);box-shadow:0 12px 26px rgba(82,68,190,.2)}
+:root[data-theme="vibrant"] .btn.primary{background:linear-gradient(135deg,#7565ed,#5142c2);border-color:#5d4dcc;box-shadow:0 5px 12px rgba(82,68,190,.18)}
+:root[data-theme="vibrant"] nav.tabs button[aria-current="page"]{background:linear-gradient(145deg,#7565ed,#5142c2);box-shadow:0 4px 10px rgba(82,68,190,.2)}
+:root[data-theme="vibrant"] .brandmark .brandicon{background:linear-gradient(145deg,#8172f5,#4d42b8)}
+:root[data-theme="vibrant"] .about-brand .brandicon{background:linear-gradient(145deg,#8172f5,#4d42b8)}
+:root[data-nav-layout="horizontal"] nav.tabs{position:fixed;left:0;right:0;top:auto;bottom:0;transform:none;width:auto;padding:0 4px max(9px,env(safe-area-inset-bottom,0px));overflow:visible}
+:root[data-nav-layout="horizontal"] nav.tabs .in{width:auto;max-width:1120px;margin:0 auto;display:flex;flex-direction:row;align-items:stretch;min-height:0}
+:root[data-nav-layout="horizontal"] nav.tabs button{flex:1 1 0;width:auto;min-height:52px;padding:5px 2px;white-space:normal}
+:root[data-nav-layout="horizontal"] #app{padding-bottom:118px}
+:root[data-nav-layout="side"] #app{padding-bottom:36px}
+@media(max-width:899px){:root[data-nav-layout="side"] #app{padding-bottom:118px}}
+@media(min-width:900px){
+ :root[data-nav-layout="horizontal"] body{padding-left:clamp(24px,3vw,56px);padding-right:clamp(24px,3vw,56px)}
+ :root[data-nav-layout="horizontal"] nav.tabs{left:0;right:0;top:auto;bottom:0;transform:none;width:auto;padding-bottom:max(9px,env(safe-area-inset-bottom,0px));}
+ :root[data-nav-layout="horizontal"] nav.tabs .in{width:auto;max-width:1120px;display:flex;flex-direction:row;}
+ :root[data-nav-layout="horizontal"] nav.tabs button{width:auto;min-height:58px;flex:1;}
+ :root[data-nav-layout="horizontal"] #app{padding-bottom:132px}
+ :root[data-nav-layout="side"] body{padding-right:clamp(112px,9vw,142px);padding-left:clamp(28px,3vw,64px)}
+ :root[data-nav-layout="side"] nav.tabs{left:auto;right:18px;top:50%;bottom:auto;transform:translateY(-50%);width:76px;padding:0;background:transparent;border:0;pointer-events:none}
+ :root[data-nav-layout="side"] nav.tabs .in{width:76px;max-width:none;margin:0;padding:7px;gap:7px;display:flex;flex-direction:column;align-items:stretch;background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:0 8px 26px rgba(0,0,0,.13);pointer-events:auto}
+ :root[data-nav-layout="side"] nav.tabs button{flex:0 0 auto;width:100%;min-height:66px;padding:7px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;border-radius:15px;font-size:10.5px;line-height:1.25}
+ :root[data-nav-layout="side"] nav.tabs .ic{width:22px;height:22px}
+ :root[data-nav-layout="side"] #app{padding-bottom:36px}
+}
+@media(min-width:1200px){:root[data-nav-layout="side"] body{padding-right:clamp(128px,10vw,160px)}:root[data-nav-layout="side"] nav.tabs{right:24px;width:82px}:root[data-nav-layout="side"] nav.tabs .in{width:82px;padding:8px;gap:8px}:root[data-nav-layout="side"] nav.tabs button{min-height:70px;font-size:11px}:root[data-nav-layout="side"] nav.tabs .ic{width:23px;height:23px}}
+@media(max-height:620px) and (min-width:900px){:root[data-nav-layout="side"] nav.tabs{top:12px;bottom:12px;transform:none;overflow-y:auto;scrollbar-width:thin}:root[data-nav-layout="side"] nav.tabs .in{min-height:100%;justify-content:center}:root[data-nav-layout="side"] nav.tabs button{min-height:56px}}
+.exit-overlay{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(8,14,18,.58)}
+.exit-box{width:min(100%,420px);padding:22px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 55px rgba(0,0,0,.25)}
+.exit-box h3{margin:0 0 8px;font-size:19px}.exit-box p{margin:0;color:var(--muted);font-size:14px}.exit-box .btns{flex-direction:column}.exit-box .btn{width:100%}
+
 </style></head><body>
 <script>
 (function(){
@@ -331,6 +369,7 @@ window.addEventListener('error',function(e){var a=document.getElementById('app')
 var C=window.Capacitor;
 if(C&&C.isNativePlatform&&C.isNativePlatform()){
   var P=C.Plugins;
+  window.__exitApp=function(){try{if(P.App&&P.App.exitApp)P.App.exitApp();}catch(e){}};
   window.claude={use:function(n){return Promise.resolve(n==='downloads'?{save:function(o){
     return P.Filesystem.writeFile({path:o.filename,data:o.data,directory:'CACHE',encoding:'utf8'}).then(function(r){
       return P.Share.share({title:'نسخة احتياطية - حسابات المخزن',files:[r.uri]});});
@@ -353,11 +392,11 @@ var KEY='hesabat-makhzan-v1';
 var MONTHS=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 var storageOk=true;
 var ui={tab:'stock',sup:null,par:null,pending:null,locked:false,pinBuf:'',all:false};
-var sheet=null,allTimer=null,DL=null;
+var sheet=null,allTimer=null,DL=null,exitPrompt=false;
 try{if(window.claude&&claude.use)claude.use('downloads').then(function(d){DL=d;if(ui.tab==='more'&&!sheet&&!ui.locked)render();}).catch(function(){});}catch(e){}
 
 /* ---------- البيانات ---------- */
-function blank(){return {v:2,seq:0,suppliers:[],parties:[],entries:[],settings:{pin:null,lastPct:10,lastBackup:null}};}
+function blank(){return {v:2,seq:0,suppliers:[],parties:[],entries:[],settings:{pin:null,lastPct:10,lastBackup:null,theme:'light',navLayout:'auto'}};}
 function load(){
   var raw=null;
   try{raw=localStorage.getItem(KEY);}catch(e){storageOk=false;return blank();}
@@ -372,6 +411,13 @@ function load(){
   }
 }
 var S=load();
+function applyPreferences(){
+  var theme=['light','dark','vibrant'].indexOf(S.settings.theme)>=0?S.settings.theme:'light';
+  var layout=['auto','side','horizontal'].indexOf(S.settings.navLayout)>=0?S.settings.navLayout:'auto';
+  document.documentElement.setAttribute('data-theme',theme);
+  document.documentElement.setAttribute('data-nav-layout',layout);
+}
+applyPreferences();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));storageOk=true;}catch(e){storageOk=false;}}
 function nid(p){S.seq+=1;return p+S.seq;}
 
@@ -647,19 +693,21 @@ function vLog(){
   listHtml(sorted(S.entries),'sup','السجل فاضي','أول حركة تسجلها هتظهر هنا.');
 }
 function vMore(){
-  var last=S.settings.lastBackup?new Date(S.settings.lastBackup).toLocaleDateString('en-GB'):'لم تتم';
+  var last=S.settings.lastBackup?new Date(S.settings.lastBackup).toLocaleString('ar-EG'):'لم تتم';
+  var theme=S.settings.theme||'light',layout=S.settings.navLayout||'auto';
+  var themeOptions=[['light','فاتح'],['dark','داكن'],['vibrant','حيوي']];
+  var layoutOptions=[['auto','تلقائي حسب الشاشة'],['side','جانبي'],['horizontal','أفقي']];
   return '<button class="back" data-act="goto" data-tab="stock">→ رجوع</button>'+top('المزيد')+
-  '<h2>نسخة احتياطية</h2><section class="card"><p class="note" style="margin-top:0">البيانات محفوظة في متصفح الموبايل ده بس. لو مسحت بيانات المتصفح بتضيع، فاحفظ نسخة كملف. الملف مش مشفّر، فخليه في مكان خاص.</p>'+
+  '<h2>شكل التطبيق</h2><section class="card"><div class="field"><label>الوضع والألوان</label><div class="chips">'+themeOptions.map(function(x){return '<button type="button" class="chip" data-act="set-theme" data-value="'+x[0]+'" aria-pressed="'+(theme===x[0])+'" style="'+(theme===x[0]?'border-color:var(--accent);background:var(--accent-soft);color:var(--accent)':'')+'">'+(theme===x[0]?'✓ ':'')+x[1]+'</button>';}).join('')+'</div></div>'+
+  '<div class="field" style="margin-bottom:0"><label>طريقة عرض قائمة التنقل</label><div class="chips">'+layoutOptions.map(function(x){return '<button type="button" class="chip" data-act="set-layout" data-value="'+x[0]+'" aria-pressed="'+(layout===x[0])+'" style="'+(layout===x[0]?'border-color:var(--accent);background:var(--accent-soft);color:var(--accent)':'')+'">'+(layout===x[0]?'✓ ':'')+x[1]+'</button>';}).join('')+'</div><p class="note">التلقائي يعرض القائمة أسفل الموبايل وعلى يمين اللابتوب. اختيار الجانبي يتحول لشريط سفلي على الشاشات الصغيرة للحفاظ على مساحة العمل.</p></div></section>'+
+  '<h2>نسخة احتياطية</h2><section class="card"><p class="note" style="margin-top:0">البيانات محفوظة على الجهاز داخل المتصفح. لو مسحت بيانات المتصفح أو غيرت الجهاز ممكن تفقدها؛ احتفظ بنسخة احتياطية في مكان آمن. ملف النسخة غير مشفّر.</p>'+
   '<p class="note">آخر نسخة: <b>'+last+'</b></p>'+
-  (DL?'<button class="btn primary block" data-act="backup-file">'+ic('save')+'حفظ نسخة كملف على الموبايل</button><div style="height:8px"></div><button class="btn block" data-act="backup">نسخ كنص (بديل)</button>':'<button class="btn primary block" data-act="backup">نسخ النسخة الاحتياطية كنص</button>')+
-  '<div id="bk" hidden style="margin-top:10px"><div class="note">لو النسخ التلقائي مشتغلش، حدد النص ده وانسخه يدوي:</div><textarea id="bkText" class="raw" readonly></textarea></div>'+
-  '<div style="height:16px"></div><label class="btn block" for="rf">استرجاع من ملف</label><input id="rf" type="file" accept=".json,.txt,application/json,text/plain" hidden>'+
-  '<div class="field" style="margin:16px 0 8px"><label for="rs">أو الصق نص النسخة</label><textarea id="rs" class="raw" placeholder="الصق النسخة هنا"></textarea></div>'+
-  '<button class="btn block" data-act="restore">استرجاع</button></section>'+
+  '<button class="btn primary block" data-act="backup-file">'+ic('save')+'حفظ نسخة احتياطية كملف JSON</button><div style="height:8px"></div><button class="btn block" data-act="backup">نسخ احتياطي كنص (بديل)</button>'+
+  '<div id="bk" hidden style="margin-top:10px"><div class="note">لو النسخ التلقائي مشتغلش، حدد النص ده وانسخه يدوي:</div><textarea id="bkText" class="raw" readonly></textarea></div>'+ 
+  '<div style="height:16px"></div><label class="btn block" for="rf">استرداد من ملف</label><input id="rf" type="file" accept=".json,.txt,application/json,text/plain" hidden>'+
+  '<div class="field" style="margin:16px 0 8px"><label for="rs">أو الصق نص النسخة</label><textarea id="rs" class="raw" placeholder="الصق النسخة هنا"></textarea></div><button class="btn block" data-act="restore">فحص النسخة والاسترداد</button></section>'+
   '<h2>القفل</h2><section class="card"><p class="note" style="margin-top:0">الرقم السري بيخبي الشاشة عن اللي يمسك موبايلك. مش بيشفّر البيانات.</p>'+
-  (S.settings.pin
-    ?'<div class="btns" style="margin:0"><button class="btn" data-act="pin-set">تغيير الرقم</button><button class="btn" data-act="pin-off">إلغاء الرقم</button><button class="btn" data-act="lock-now">قفل الآن</button></div>'
-    :'<button class="btn block" data-act="pin-set">تفعيل رقم سري (4 أرقام)</button>')+'</section>'+
+  (S.settings.pin?'<div class="btns" style="margin:0"><button class="btn" data-act="pin-set">تغيير الرقم</button><button class="btn" data-act="pin-off">إلغاء الرقم</button><button class="btn" data-act="lock-now">قفل الآن</button></div>':'<button class="btn block" data-act="pin-set">تفعيل رقم سري (4 أرقام)</button>')+'</section>'+
   '<h2>مسح البيانات</h2><section class="card"><button class="btn block" data-act="wipe" style="color:var(--danger)">مسح كل البيانات</button></section>'+
   '<h2>معلومات التطبيق</h2><section class="card about-card"><div class="about-brand"><span class="brandicon">SH</span><div><b>SH TRADING</b><small>إدارة المخزون والحسابات</small></div></div><div class="about-signature"><b>MOHAMED ALI</b><a href="https://wa.me/201114142610?text='+encodeURIComponent('مرحباً، عندي استفسار بخصوص تطبيق SH TRADING')+'" target="_blank" rel="noopener noreferrer" aria-label="01114142610">01114142610</a></div></section>';
 }
@@ -728,6 +776,7 @@ function renderLayer(){
       '<div id="prev" class="preview" hidden></div><div id="sheetErr" class="err"></div>'+
       '<div class="btns"><button type="submit" class="btn '+(sheet.danger?'danger':'primary')+'">'+(sheet.submit||'حفظ')+'</button><button type="button" class="btn" data-act="sheet-close">إلغاء</button></div></form></div>';
   }
+  if(exitPrompt){h+='<div class="exit-overlay"><div class="exit-box" role="dialog" aria-modal="true"><h3>حماية بيانات المخزن</h3><p>هل تريد إنشاء نسخة احتياطية من بياناتك قبل الخروج؟</p><div class="btns"><button class="btn primary" data-act="exit-backup">'+ic('save')+'نعم، إنشاء نسخة احتياطية</button><button class="btn" data-act="exit-now">لا، خروج بدون نسخة</button><button class="link" data-act="exit-stay">إلغاء والعودة للتطبيق</button></div></div></div>'; }
   var t=document.getElementById('toast');
   L.innerHTML=h+(t?t.outerHTML:'');
 }
@@ -940,46 +989,86 @@ function openPinOff(){
 /* النسخ الاحتياطي */
 function toB64(s){var b=new TextEncoder().encode(s),bin='';b.forEach(function(x){bin+=String.fromCharCode(x);});return btoa(bin);}
 function fromB64(t){var bin=atob(t),a=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new TextDecoder().decode(a);}
-function exportObj(){var o=JSON.parse(JSON.stringify(S));o.settings.pin=null;o.settings.lastBackup=null;return o;}
+function backupMeta(o){
+  var dates=(o.entries||[]).map(function(e){return e.ts;}).filter(Boolean).sort();
+  return {format:'SH-TRADING-BACKUP',formatVersion:1,createdAt:new Date().toISOString(),appVersion:'2',counts:{suppliers:(o.suppliers||[]).length,parties:(o.parties||[]).length,entries:(o.entries||[]).length},dateRange:{from:dates[0]||null,to:dates[dates.length-1]||null}};
+}
+function exportObj(){var o=JSON.parse(JSON.stringify(S));o.settings.pin=null;o.settings.lastBackup=null;o.backupMeta=backupMeta(o);return o;}
 function exportText(){return 'HSB1:'+toB64(JSON.stringify(exportObj()));}
-function backupFile(){
-  if(!DL){doBackup();return;}
-  DL.save({filename:'hesabat-'+todayStr()+'.json',data:JSON.stringify(exportObj())}).then(function(){
-    S.settings.lastBackup=Date.now();save();toast('تم حفظ الملف على الموبايل');render();
-  }).catch(function(e){
-    if(e&&e.code==='declined'){toast('لم يتم الحفظ');return;}
-    toast('تعذّر حفظ الملف، استخدم النسخ كنص');
-  });
-}
-function readBackupFile(file){
-  var r=new FileReader();r.onload=function(){doRestore(String(r.result||''));};r.onerror=function(){toast('تعذّرت قراءة الملف');};r.readAsText(file);
-}
-function doBackup(){
-  var txt=exportText();
-  function done(){S.settings.lastBackup=Date.now();save();toast('تم النسخ. الصقه في واتساب وابعته لنفسك');render();}
-  function fallback(){
-    var box=document.getElementById('bk'),ta=document.getElementById('bkText');
-    box.hidden=false;ta.value=txt;ta.focus();ta.select();
-    S.settings.lastBackup=Date.now();save();
-  }
+function markBackup(){S.settings.lastBackup=Date.now();save();}
+function backupFile(onDone){
+  var data=JSON.stringify(exportObj(),null,2),filename='SH-TRADING-backup-'+todayStr()+'.json';
+  if(DL){DL.save({filename:filename,data:data}).then(function(){markBackup();toast('تم تجهيز النسخة الاحتياطية');render();if(onDone)onDone(true);}).catch(function(){toast('تعذّر حفظ الملف. لم يتم الخروج.');if(onDone)onDone(false);});return;}
   try{
-    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,fallback);}
-    else fallback();
-  }catch(e){fallback();}
+    var blob=new Blob([data],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1500);
+    markBackup();toast('بدأ تنزيل ملف النسخة الاحتياطية');render();if(onDone)onDone(true);
+  }catch(e){toast('تعذّر إنشاء ملف النسخة. لم يتم الخروج.');if(onDone)onDone(false);}
+}
+function doBackup(onDone){
+  var txt=exportText();
+  function done(){markBackup();toast('تم نسخ النسخة الاحتياطية');render();if(onDone)onDone(true);}
+  function fallback(){var box=document.getElementById('bk'),ta=document.getElementById('bkText');if(box&&ta){box.hidden=false;ta.value=txt;ta.focus();ta.select();}toast('النسخة جاهزة للنسخ اليدوي');if(onDone)onDone(false);}
+  try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,fallback);else fallback();}catch(e){fallback();}
+}
+function readBackupFile(file){var r=new FileReader();r.onload=function(){doRestore(String(r.result||''));};r.onerror=function(){toast('تعذّرت قراءة الملف');};r.readAsText(file);}
+function parseBackup(raw){
+  var o=JSON.parse(raw.indexOf('HSB1:')===0?fromB64(raw.slice(5)):raw);
+  if(!o||!Array.isArray(o.entries)||!Array.isArray(o.suppliers)||!Array.isArray(o.parties))throw new Error('invalid');
+  if(!o.settings||typeof o.settings!=='object')o.settings={};
+  o.entries.forEach(function(e){if(!e||!e.id||!e.type)throw new Error('invalid entry');});
+  o.suppliers.forEach(function(x){if(!x||!x.id||!x.name)throw new Error('invalid supplier');});
+  o.parties.forEach(function(x){if(!x||!x.id||!x.name)throw new Error('invalid party');});
+  return o;
+}
+function mergeMovements(incoming){
+  var supMap={},parMap={},entryMap={},entrySkip={},usedSup={},usedPar={},existingEntries={};
+  S.seq=Math.max(Number(S.seq)||0,Number(incoming.seq)||0);
+  S.suppliers.forEach(function(x){usedSup[x.id]=1;});S.parties.forEach(function(x){usedPar[x.id]=1;});S.entries.forEach(function(x){existingEntries[x.id]=x;});
+  (incoming.suppliers||[]).forEach(function(x){
+    var same=S.suppliers.filter(function(y){return y.id===x.id||y.name.trim()===x.name.trim();})[0];
+    if(same){supMap[x.id]=same.id;}else{var id=x.id;if(usedSup[id]){do{id=nid('s');}while(usedSup[id]);}usedSup[id]=1;S.suppliers.push({id:id,name:x.name});supMap[x.id]=id;}
+  });
+  (incoming.parties||[]).forEach(function(x){
+    var same=S.parties.filter(function(y){return y.id===x.id||y.name.trim()===x.name.trim();})[0];
+    if(same){parMap[x.id]=same.id;}else{var id=x.id;if(usedPar[id]){do{id=nid('p');}while(usedPar[id]);}usedPar[id]=1;S.parties.push({id:id,name:x.name});parMap[x.id]=id;}
+  });
+  var added=0,skipped=0;
+  (incoming.entries||[]).forEach(function(e){
+    var old=existingEntries[e.id];
+    if(old&&JSON.stringify(old)===JSON.stringify(e)){entryMap[e.id]=e.id;entrySkip[e.id]=1;skipped++;}
+    else if(old){var id;do{id=nid('e');}while(existingEntries[id]);entryMap[e.id]=id;}
+    else{entryMap[e.id]=e.id;}
+  });
+  (incoming.entries||[]).forEach(function(e){
+    if(entrySkip[e.id])return;
+    var c=JSON.parse(JSON.stringify(e));c.id=entryMap[e.id];
+    if(c.sup&&supMap[c.sup])c.sup=supMap[c.sup];if(c.party&&parMap[c.party])c.party=parMap[c.party];
+    if(c.type==='reversal'&&c.ref&&entryMap[c.ref])c.ref=entryMap[c.ref];
+    S.entries.push(c);added++;
+  });
+  return {added:added,skipped:skipped};
 }
 function doRestore(rawIn){
-  var raw=(typeof rawIn==='string'?rawIn:(document.getElementById('rs').value||'')).trim();
-  if(!raw){toast('الصق النسخة الاحتياطية الأول');return;}
-  var o;
-  try{
-    o=JSON.parse(raw.indexOf('HSB1:')===0?fromB64(raw.slice(5)):raw);
-    if(!o||!Array.isArray(o.entries)||!Array.isArray(o.suppliers))throw 0;
-  }catch(e){toast('النسخة غير صالحة');return;}
-  openSheet({title:'استرجاع النسخة',body:'هيتم استبدال كل البيانات الحالية بنسخة فيها '+o.entries.length+' حركة.',fields:[],submit:'استرجاع',danger:true,
-    onSubmit:function(){
-      var b=blank(),pin=S.settings.pin;
-      o.settings=Object.assign(b.settings,o.settings||{});o.settings.pin=pin;
-      S=Object.assign(b,o);save();ui.tab='stock';ui.sup=null;ui.par=null;toast('تم الاسترجاع');}});
+  var raw=(typeof rawIn==='string'?rawIn:(document.getElementById('rs').value||'')).trim();if(!raw){toast('اختار ملف النسخة أو الصق محتواها الأول');return;}
+  var o;try{o=parseBackup(raw);}catch(e){toast('النسخة غير صالحة أو غير مكتملة');return;}
+  var meta=o.backupMeta||backupMeta(o),counts=meta.counts||{suppliers:o.suppliers.length,parties:o.parties.length,entries:o.entries.length},range=meta.dateRange||{};
+  var created=meta.createdAt?new Date(meta.createdAt).toLocaleString('ar-EG'):'غير محدد';
+  var details='تاريخ النسخة: '+created+'\nالموردون: '+counts.suppliers+'\nالعملاء: '+counts.parties+'\nالحركات: '+counts.entries+'\nنطاق الحركات: '+(range.from||'—')+' إلى '+(range.to||'—');
+  openSheet({title:'تفاصيل النسخة والاسترداد',body:esc(details).replace(/\n/g,'<br>'),fields:[{name:'mode',label:'طريقة الاسترداد',type:'select',value:'replace',options:[{v:'replace',t:'استبدال كل البيانات الحالية'},{v:'append',t:'إضافة الحركات فقط مع الاحتفاظ بالحالي'}]}],submit:'متابعة الاسترداد',danger:true,
+    onSubmit:function(v){
+      if(v.mode==='append'){
+        var result=mergeMovements(o);save();ui.tab='stock';ui.sup=null;ui.par=null;toast('تمت إضافة '+result.added+' حركة، وتخطي '+result.skipped+' حركة مكررة');return;
+      }
+      return new Promise(function(resolve){
+        backupFile(function(ok){
+          if(!ok){resolve('لم نتمكن من إنشاء نسخة من البيانات الحالية؛ تم إلغاء الاستبدال حفاظاً عليها.');return;}
+          var b=blank(),pin=S.settings.pin,oldBackup=S.settings.lastBackup;
+          o.settings=Object.assign(b.settings,o.settings||{});o.settings.pin=pin;o.settings.lastBackup=oldBackup;
+          delete o.backupMeta;S=Object.assign(b,o);applyPreferences();save();ui.tab='stock';ui.sup=null;ui.par=null;toast('تم الاستبدال بعد إنشاء نسخة أمان من البيانات السابقة');resolve();
+        });
+      });
+    }});
 }
 function openWipe(){
   openSheet({title:'مسح كل البيانات',body:'هتتمسح كل الموردين والعملاء والحركات من الموبايل ده ومش هتقدر ترجعها إلا من نسخة احتياطية.',fields:[],submit:'امسح كل حاجة',danger:true,
@@ -1005,6 +1094,11 @@ document.addEventListener('click',function(ev){
   if(a!=='cancel')ui.pending=null;
   switch(a){
     case 'goto':ui.tab=el.getAttribute('data-tab');ui.sup=null;ui.par=null;render();window.scrollTo(0,0);break;
+    case 'set-theme':S.settings.theme=el.getAttribute('data-value');applyPreferences();save();render();break;
+    case 'set-layout':S.settings.navLayout=el.getAttribute('data-value');applyPreferences();save();render();break;
+    case 'exit-backup':exitPrompt=false;renderLayer();backupFile(function(ok){if(ok){if(window.__exitApp)window.__exitApp();else toast('تم تجهيز الملف. يمكنك إغلاق الصفحة الآن.');}else{exitPrompt=true;renderLayer();}});break;
+    case 'exit-now':exitPrompt=false;renderLayer();if(window.__exitApp)window.__exitApp();else toast('يمكنك إغلاق علامة التبويب الآن.');break;
+    case 'exit-stay':exitPrompt=false;renderLayer();break;
     case 'eye':
       ui.all=!ui.all;clearTimeout(allTimer);
       if(ui.all)allTimer=setTimeout(function(){ui.all=false;if(!sheet&&!ui.locked)render();},60000);
@@ -1080,7 +1174,8 @@ document.addEventListener('keydown',function(ev){
 
 if(S.settings.pin){ui.locked=true;}
 if(storageOk)save();
-window.__back=function(){if(sheet){closeSheet();return true;}if(ui.sup||ui.par){ui.sup=null;ui.par=null;render();return true;}if(ui.tab!=='stock'){ui.tab='stock';render();return true;}return false;};
+window.__back=function(){if(exitPrompt){return true;}if(sheet){closeSheet();return true;}if(ui.sup||ui.par){ui.sup=null;ui.par=null;render();return true;}if(ui.tab!=='stock'){ui.tab='stock';render();return true;}exitPrompt=true;renderLayer();return true;};
+try{var cap=window.Capacitor,nativeApp=!!(cap&&cap.isNativePlatform&&cap.isNativePlatform());if(!nativeApp&&window.history){history.pushState({shTrading:true},'',location.href);window.addEventListener('popstate',function(){window.__back();history.pushState({shTrading:true},'',location.href);});}}catch(e){}
 render();
 })();
 </script>
