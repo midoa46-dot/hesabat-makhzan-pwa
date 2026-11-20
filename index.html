@@ -463,39 +463,45 @@ function parName(id){if(id==='shop')return 'المحل';for(var i=0;i<S.parties.
 function byId(id){for(var i=0;i<S.entries.length;i++)if(S.entries[i].id===id)return S.entries[i];return null;}
 
 /* ---------- الحسابات: كل الأرصدة بتتحسب من الحركات ---------- */
-var KEYS=['cost','sale','supplied','paid','issued','received','cash'];
-function zero(){return {sup:null,party:null,cost:0,sale:0,supplied:0,paid:0,issued:0,received:0,cash:0};}
+var KEYS=['cost','sale','supplied','paid','issued','received','cash','wallet'];
+function zero(){return {sup:null,party:null,cost:0,sale:0,supplied:0,paid:0,issued:0,received:0,cash:0,wallet:0};}
+function methodOf(e){return e&&e.method==='wallet'?'wallet':'cash';}
+function putMoney(f,amount,method){f[method==='wallet'?'wallet':'cash']+=amount;}
 function fx(e){
-  var f=zero();
+  var f=zero(),m=methodOf(e);
   switch(e.type){
-    case 'supply':f.sup=e.sup;f.cost=e.cost;f.sale=r2(e.cost*(1+e.pct/100));f.supplied=e.cost;f.paid=e.paid||0;f.cash=-(e.paid||0);break;
-    case 'pay':f.sup=e.sup;f.paid=e.amount;f.cash=-e.amount;break;
-    case 'issue':f.party=e.party;f.cost=-e.costOut;f.sale=-e.amount;f.issued=e.amount;f.received=e.paid||0;f.cash=e.paid||0;break;
-    case 'collect':f.party=e.party;f.received=e.amount;f.cash=e.party==='shop'?0:e.amount;break;
-    case 'close':f.cash=e.net;break;
-    case 'deposit':f.cash=e.amount;break;
-    case 'withdraw':f.cash=-e.amount;break;
-    case 'adjust':f.cash=e.amount;break;
+    case 'supply':f.sup=e.sup;f.cost=e.cost;f.sale=r2(e.cost*(1+e.pct/100));f.supplied=e.cost;f.paid=e.paid||0;putMoney(f,-(e.paid||0),e.paidMethod||'cash');break;
+    case 'pay':f.sup=e.sup;f.paid=e.amount;putMoney(f,-e.amount,m);break;
+    case 'issue':f.party=e.party;f.cost=-e.costOut;f.sale=-e.amount;f.issued=e.amount;f.received=e.paid||0;putMoney(f,e.paid||0,e.paidMethod||'cash');break;
+    case 'collect':f.party=e.party;f.received=e.amount;if(e.party!=='shop')putMoney(f,e.amount,m);break;
+    case 'close':
+      if(e.netCash!==undefined||e.netWallet!==undefined){f.cash=Number(e.netCash)||0;f.wallet=Number(e.netWallet)||0;}
+      else f.cash=e.net||0;
+      break;
+    case 'deposit':putMoney(f,e.amount,m);break;
+    case 'withdraw':putMoney(f,-e.amount,m);break;
+    case 'adjust':putMoney(f,e.amount,m);break;
+    case 'transfer':if(e.from==='wallet'){f.wallet=-(Number(e.amount)||0);f.cash=Number(e.amount)||0;}else{f.cash=-(Number(e.amount)||0);f.wallet=Number(e.amount)||0;}break;
     case 'reversal':
       var o=byId(e.ref);
       if(o){var g=fx(o);f.sup=g.sup;f.party=g.party;KEYS.forEach(function(k){f[k]=-g[k];});}
       break;
   }
-  return f;
+  f.cash=r2(f.cash);f.wallet=r2(f.wallet);return f;
 }
 function calc(){
-  var T={cost:0,sale:0,cash:0,owed:0,recv:0,sup:{},par:{}};
+  var T={cost:0,sale:0,cash:0,cashOnHand:0,wallet:0,owed:0,recv:0,sup:{},par:{}};
   S.suppliers.forEach(function(s){T.sup[s.id]={supplied:0,paid:0,left:0};});
   T.par.shop={issued:0,received:0,left:0};
   S.parties.forEach(function(p){T.par[p.id]={issued:0,received:0,left:0};});
   S.entries.forEach(function(e){
-    var f=fx(e);T.cost+=f.cost;T.sale+=f.sale;T.cash+=f.cash;
+    var f=fx(e);T.cost+=f.cost;T.sale+=f.sale;T.cash+=f.cash+f.wallet;T.cashOnHand+=f.cash;T.wallet+=f.wallet;
     if(f.sup&&T.sup[f.sup]){T.sup[f.sup].supplied+=f.supplied;T.sup[f.sup].paid+=f.paid;}
     if(f.party&&T.par[f.party]){T.par[f.party].issued+=f.issued;T.par[f.party].received+=f.received;}
   });
   S.suppliers.forEach(function(s){var t=T.sup[s.id];t.supplied=r2(t.supplied);t.paid=r2(t.paid);t.left=r2(t.supplied-t.paid);T.owed+=t.left;});
   Object.keys(T.par).forEach(function(k){var t=T.par[k];t.issued=r2(t.issued);t.received=r2(t.received);t.left=r2(t.issued-t.received);T.recv+=t.left;});
-  T.cost=r2(T.cost);T.sale=r2(T.sale);T.cash=r2(T.cash);T.owed=r2(T.owed);T.recv=r2(T.recv);
+  T.cost=r2(T.cost);T.sale=r2(T.sale);T.cash=r2(T.cash);T.cashOnHand=r2(T.cashOnHand);T.wallet=r2(T.wallet);T.owed=r2(T.owed);T.recv=r2(T.recv);
   T.net=r2(T.cash+T.recv+T.sale-T.owed);
   return T;
 }
@@ -509,14 +515,14 @@ function isJournalType(e){return (e.type==='collect'&&e.party==='shop')||e.type=
 function lastClose(){var u=0;S.entries.forEach(function(e){if(e.type==='close'&&e.upTo>u)u=e.upTo;});return u;}
 function isLocked(e){return e.type==='close'||(isJournalType(e)&&e.seq<=lastClose());}
 function journal(){
-  var up=lastClose(),rev=reversedSet(),items=[],inc=0,exp=0;
+  var up=lastClose(),rev=reversedSet(),items=[],inc=0,exp=0,incCash=0,incWallet=0,expCash=0,expWallet=0;
   S.entries.forEach(function(e){
     if(!isJournalType(e)||e.seq<=up)return;
     items.push(e);
     if(rev[e.id])return;
-    if(e.type==='collect')inc+=e.amount;else exp+=e.amount;
+    if(e.type==='collect'){inc+=e.amount;if(methodOf(e)==='wallet')incWallet+=e.amount;else incCash+=e.amount;}else{exp+=e.amount;if(methodOf(e)==='wallet')expWallet+=e.amount;else expCash+=e.amount;}
   });
-  return {items:sorted(items),income:r2(inc),expenses:r2(exp),net:r2(inc-exp),active:items.length>0};
+  return {items:sorted(items),income:r2(inc),expenses:r2(exp),net:r2(inc-exp),netCash:r2(incCash-expCash),netWallet:r2(incWallet-expWallet),active:items.length>0};
 }
 
 function describe(e,ctx){
@@ -525,32 +531,32 @@ function describe(e,ctx){
   switch(e.type){
     case 'supply':
       d.title='توريدة من '+supName(e.sup);
-      d.sub=fmtDate(e.ts)+(ctx==='stock'?' · '+n(e.cost)+' + '+sx(e.pct+'%')+' = '+n(fx(e).sale):'')+(e.paid?' · دفعت '+n(e.paid):'')+noteTxt;
+      d.sub=fmtDate(e.ts)+(ctx==='stock'?' · '+n(e.cost)+' + '+sx(e.pct+'%')+' = '+n(fx(e).sale):'')+(e.paid?' · دفعت '+n(e.paid)+' ('+(e.paidMethod==='wallet'?'محفظة':'كاش')+')':'')+noteTxt;
       d.amt=money(e.cost);break;
     case 'pay':
-      d.title='دفعة للمورد '+supName(e.sup);d.sub=fmtDate(e.ts)+noteTxt;d.amt=money(e.amount);break;
+      d.title='دفعة للمورد '+supName(e.sup);d.sub=fmtDate(e.ts)+' · '+methodLabel(e)+noteTxt;d.amt=money(e.amount);break;
     case 'issue':
-      d.title='طلعة إلى '+parName(e.party);d.sub=fmtDate(e.ts)+(e.paid?' · استلمت '+n(e.paid):'')+noteTxt;d.amt=money(e.amount);break;
+      d.title='طلعة إلى '+parName(e.party);d.sub=fmtDate(e.ts)+(e.paid?' · استلمت '+n(e.paid)+' ('+(e.paidMethod==='wallet'?'محفظة':'كاش')+')':'')+noteTxt;d.amt=money(e.amount);break;
     case 'collect':
       d.title=e.party==='shop'?'دفعة من المحل':'تحصيل من '+parName(e.party);
-      d.sub=fmtDate(e.ts)+(e.party==='shop'?' · في اليومية':'')+noteTxt;d.amt=money(e.amount,'pos');break;
+      d.sub=fmtDate(e.ts)+' · '+methodLabel(e)+(e.party==='shop'?' · في اليومية':'')+noteTxt;d.amt=money(e.amount,'pos');break;
     case 'shopExp':
-      d.title='مصروف المحل: '+esc(e.name);d.sub=fmtDate(e.ts)+noteTxt;d.amt=money(e.amount,'neg');break;
+      d.title='مصروف المحل: '+esc(e.name);d.sub=fmtDate(e.ts)+' · '+methodLabel(e)+noteTxt;d.amt=money(e.amount,'neg');break;
     case 'close':
-      d.title='قفل يوم المحل';d.sub=fmtDate(e.ts)+' · دخل '+n(e.income)+' · مصروفات '+n(e.expenses);
+      d.title='قفل يوم المحل';d.sub=fmtDate(e.ts)+' · دخل '+n(e.income)+' · مصروفات '+n(e.expenses)+' · كاش '+n(e.netCash===undefined?e.net:e.netCash)+' · محفظة '+n(e.netWallet||0);
       d.amt='<span class="'+(e.net>=0?'pos':'neg')+'">'+signed(e.net)+'<span class="unit">ج.م</span></span>';break;
     case 'deposit':
-      d.title='إيداع في الخزنة';d.sub=fmtDate(e.ts)+noteTxt;d.amt=money(e.amount,'pos');break;
+      d.title='إيداع في الخزنة';d.sub=fmtDate(e.ts)+' · '+methodLabel(e)+noteTxt;d.amt=money(e.amount,'pos');break;
     case 'withdraw':
-      d.title='مصروف من الخزنة';d.sub=fmtDate(e.ts)+noteTxt;d.amt=money(e.amount,'neg');break;
+      d.title='مصروف من الخزنة';d.sub=fmtDate(e.ts)+' · '+methodLabel(e)+noteTxt;d.amt=money(e.amount,'neg');break;
     case 'adjust':
-      d.title='تسوية جرد الخزنة';d.sub=fmtDate(e.ts)+noteTxt;d.amt=money(Math.abs(e.amount),e.amount>0?'pos':'neg');break;
+      d.title='تسوية جرد الخزنة';d.sub=fmtDate(e.ts)+' · '+methodLabel(e)+noteTxt;d.amt=money(Math.abs(e.amount),e.amount>0?'pos':'neg');break;
     case 'reversal':
       var o=byId(e.ref);var od=o?describe(o,ctx):{title:'حركة محذوفة'};
       d.title='إلغاء: '+od.title;d.sub=fmtDate(e.ts)+' · قيد عكسي';d.amt='';break;
   }
   if(ctx==='cash'){
-    var c=fx(e).cash;
+    var cf=fx(e),c=cf.cash!==0?cf.cash:cf.wallet;
     d.amt='<span class="'+(c>0?'pos':'neg')+'">'+signed(c)+'<span class="unit">ج.م</span></span>';
   }
   return d;
@@ -680,11 +686,11 @@ function vShop(T){
 }
 
 function vCash(T){
-  var moves=sorted(S.entries.filter(function(e){return fx(e).cash!==0;}));
+  var moves=sorted(S.entries.filter(function(e){var f=fx(e);return f.cash!==0||f.wallet!==0;}));
   return top('الخزنة')+notice()+
-  '<section class="card"><div style="color:var(--muted);font-size:13px">رصيد الخزنة</div><div style="font-size:32px;font-weight:700;line-height:1.3">'+money(T.cash,T.cash<0?'neg':'')+'</div></section>'+
-  '<div class="btns"><button class="btn" data-act="new-deposit">+ إيداع</button><button class="btn" data-act="new-withdraw">− مصروف / سحب</button></div>'+
-  '<h2>جرد الخزنة</h2><section class="card"><div class="field" style="margin-bottom:8px"><label for="count">الفلوس الفعلية اللي في الخزنة دلوقتي</label><input id="count" class="m" inputmode="decimal" autocomplete="off" placeholder="اكتب المبلغ"></div><div id="countRes" class="note">اكتب المبلغ وهيظهر الفرق عن الرصيد المحسوب.</div></section>'+
+  '<section class="hero"><div class="lbl">إجمالي رصيد الخزنة</div><div class="big">'+money(T.cash,T.cash<0?'neg':'')+'</div><dl class="split"><div><dt>نقدية / كاش</dt><dd>'+money(T.cashOnHand,T.cashOnHand<0?'neg':'')+'</dd></div><div><dt>محفظة إلكترونية</dt><dd>'+money(T.wallet,T.wallet<0?'neg':'')+'</dd></div></dl></section>'+
+  '<div class="btns"><button class="btn" data-act="new-deposit">+ إيداع</button><button class="btn" data-act="new-withdraw">− مصروف / سحب</button></div><button class="btn block" data-act="new-transfer">⇄ تحويل بين الكاش والمحفظة</button>'+
+  '<h2>جرد الخزنة</h2><section class="card"><div class="field" style="margin-bottom:8px"><label for="countMethod">نوع الرصيد المراد جرده</label><select id="countMethod"><option value="cash">الكاش / النقدية</option><option value="wallet">المحفظة الإلكترونية</option></select><label for="count">الرصيد الفعلي</label><input id="count" class="m" inputmode="decimal" autocomplete="off" placeholder="اكتب المبلغ"></div><div id="countRes" class="note">اكتب المبلغ وهيظهر الفرق عن الرصيد المحسوب.</div></section>'+
   '<h2>حركات الخزنة</h2>'+listHtml(moves,'cash','مفيش حركات في الخزنة','ابدأ بإيداع الرصيد الافتتاحي بزرار «إيداع».');
 }
 function vLog(){
@@ -788,6 +794,8 @@ function toast(msg){
 
 /* ---------- العمليات ---------- */
 function supOptions(){return S.suppliers.map(function(s){return {v:s.id,t:s.name};});}
+function methodLabel(e){return methodOf(e)==='wallet'?'محفظة إلكترونية':'كاش';}
+function paymentField(label){return {name:'method',label:label||'طريقة الدفع / الاستلام',type:'select',value:'cash',options:[{v:'cash',t:'كاش / نقدية'},{v:'wallet',t:'محفظة إلكترونية (Vodafone Cash / InstaPay)'}]};}
 function addEntry(e){e.id=nid('e');e.seq=S.seq;if(!e.ts)e.ts=todayStr();S.entries.push(e);save();}
 function pctChips(){return [5,10,15,20,25].map(function(x){return {t:x+'%',v:String(x)};});}
 
@@ -808,6 +816,7 @@ function openSupply(supId){
     {name:'cost',label:'قيمة التوريدة (التكلفة)',type:'money'},
     {name:'pct',label:'نسبة الربح %',type:'money',value:String(S.settings.lastPct),chips:pctChips()},
     {name:'paid',label:'المدفوع للمورد الآن (اختياري)',type:'money'},
+    {name:'paidMethod',label:'طريقة دفع المبلغ للمورد',type:'select',value:'cash',options:[{v:'cash',t:'كاش / نقدية'},{v:'wallet',t:'محفظة إلكترونية (Vodafone Cash / InstaPay)'}]},
     {name:'date',label:'التاريخ',type:'date'},
     {name:'note',label:'ملاحظة (اختياري)',type:'text'}],
     submit:'حفظ التوريدة',
@@ -826,7 +835,7 @@ function openSupply(supId){
       if(isNaN(pd)||pd<0)return 'المبلغ المدفوع مش صحيح.';
       if(pd>c)return 'المدفوع أكبر من قيمة التوريدة.';
       S.settings.lastPct=p;
-      addEntry({type:'supply',sup:v.sup,cost:r2(c),pct:p,paid:r2(pd),ts:v.date,note:v.note.trim()});
+      addEntry({type:'supply',sup:v.sup,cost:r2(c),pct:p,paid:r2(pd),paidMethod:v.paidMethod||'cash',ts:v.date,note:v.note.trim()});
       toast('تم تسجيل التوريدة');}});
 }
 function openPay(supId){
@@ -834,7 +843,7 @@ function openPay(supId){
   var T=calc();
   openSheet({title:'دفعة لمورد',fields:[
     {name:'sup',label:'المورد',type:'select',value:supId||S.suppliers[0].id,options:supOptions()},
-    {name:'amount',label:'المبلغ المدفوع',type:'money'},
+    {name:'amount',label:'المبلغ المدفوع',type:'money'},paymentField('طريقة الدفع للمورد'),
     {name:'date',label:'التاريخ',type:'date'},
     {name:'note',label:'ملاحظة (اختياري)',type:'text'}],
     submit:'حفظ الدفعة',
@@ -845,7 +854,7 @@ function openPay(supId){
       return {html:h};},
     onSubmit:function(v){
       var a=parseNum(v.amount);if(isNaN(a)||a<=0)return 'اكتب المبلغ بشكل صحيح.';
-      addEntry({type:'pay',sup:v.sup,amount:r2(a),ts:v.date,note:v.note.trim()});toast('تم تسجيل الدفعة');}});
+      addEntry({type:'pay',sup:v.sup,amount:r2(a),method:v.method||'cash',ts:v.date,note:v.note.trim()});toast('تم تسجيل الدفعة');}});
 }
 function openIssue(partyId){
   var T=calc();
@@ -853,7 +862,7 @@ function openIssue(partyId){
   openSheet({title:'طلعة من المخزن',body:'المبلغ بسعر البيع (بعد الربح). بيتخصم من رصيد المخزن.',fields:[
     {name:'party',label:'لمين',type:'select',value:partyId||opts[0].v,options:opts},
     {name:'amount',label:'قيمة الطلعة',type:'money'},
-    {name:'paid',label:'المستلم الآن (للعملاء، مش المحل)',type:'money'},
+    {name:'paid',label:'المستلم الآن (للعملاء، مش المحل)',type:'money'},paymentField('طريقة استلام المبلغ الآن'),
     {name:'date',label:'التاريخ',type:'date'},
     {name:'note',label:'ملاحظة (اختياري)',type:'text'}],
     submit:'حفظ الطلعة',
@@ -870,7 +879,7 @@ function openIssue(partyId){
       if(v.party==='shop'&&pd>0)return 'دفعات المحل بتتسجل من يومية المحل.';
       if(a>TT.sale+0.005)return 'قيمة الطلعة أكبر من رصيد المخزن.';
       var costOut=TT.sale>0?r2(a*TT.cost/TT.sale):0;
-      addEntry({type:'issue',party:v.party,amount:r2(a),costOut:costOut,paid:r2(pd),ts:v.date,note:v.note.trim()});
+      addEntry({type:'issue',party:v.party,amount:r2(a),costOut:costOut,paid:r2(pd),paidMethod:v.method||'cash',ts:v.date,note:v.note.trim()});
       toast('تم تسجيل الطلعة');}});
 }
 function openCollect(partyId){
@@ -878,7 +887,7 @@ function openCollect(partyId){
   var T=calc();
   openSheet({title:'تحصيل من عميل',fields:[
     {name:'party',label:'العميل',type:'select',value:partyId||S.parties[0].id,options:S.parties.map(function(p){return {v:p.id,t:p.name};})},
-    {name:'amount',label:'المبلغ المستلم',type:'money'},
+    {name:'amount',label:'المبلغ المستلم',type:'money'},paymentField('طريقة استلام المبلغ'),
     {name:'date',label:'التاريخ',type:'date'},
     {name:'note',label:'ملاحظة (اختياري)',type:'text'}],
     submit:'حفظ التحصيل',
@@ -889,27 +898,27 @@ function openCollect(partyId){
       return {html:h};},
     onSubmit:function(v){
       var a=parseNum(v.amount);if(isNaN(a)||a<=0)return 'اكتب المبلغ بشكل صحيح.';
-      addEntry({type:'collect',party:v.party,amount:r2(a),ts:v.date,note:v.note.trim()});toast('تم تسجيل التحصيل');}});
+      addEntry({type:'collect',party:v.party,amount:r2(a),method:v.method||'cash',ts:v.date,note:v.note.trim()});toast('تم تسجيل التحصيل');}});
 }
 function openShopCollect(){
   var T=calc();
   openSheet({title:'دفعة من المحل',body:'بتتسجل في اليومية، وبتنزل الخزنة عند قفل اليوم.',fields:[
-    {name:'amount',label:'المبلغ الذي دفعه المحل',type:'money'},
+    {name:'amount',label:'المبلغ الذي دفعه المحل',type:'money'},paymentField('طريقة استلام المبلغ'),
     {name:'note',label:'ملاحظة (اختياري)',type:'text'}],
     submit:'حفظ',
     preview:function(v){var a=parseNum(v.amount);if(isNaN(a)||a<=0)return null;return {html:'المتبقي على المحل بعد الدفعة <b>'+nv(T.par.shop.left-a)+'</b>'};},
     onSubmit:function(v){
       var a=parseNum(v.amount);if(isNaN(a)||a<=0)return 'اكتب المبلغ بشكل صحيح.';
-      addEntry({type:'collect',party:'shop',amount:r2(a),note:v.note.trim()});toast('اتسجلت في اليومية');}});
+      addEntry({type:'collect',party:'shop',amount:r2(a),method:v.method||'cash',note:v.note.trim()});toast('اتسجلت في اليومية');}});
 }
 function openShopExp(){
   openSheet({title:'مصروف / نثرية المحل',fields:[
     {name:'name',label:'البند',type:'text',ph:'مثال: كهربا',chips:['كهربا','مواصلات','شاي وسكر','عامل','نظافة'].map(function(x){return {t:x,v:x};})},
-    {name:'amount',label:'المبلغ',type:'money'}],
+    {name:'amount',label:'المبلغ',type:'money'},paymentField('طريقة دفع المصروف')],
     submit:'حفظ',
     onSubmit:function(v){
       var a=parseNum(v.amount);if(!v.name.trim())return 'اكتب اسم البند.';if(isNaN(a)||a<=0)return 'اكتب المبلغ بشكل صحيح.';
-      addEntry({type:'shopExp',name:v.name.trim(),amount:r2(a)});toast('اتسجل في اليومية');}});
+      addEntry({type:'shopExp',name:v.name.trim(),amount:r2(a),method:v.method||'cash'});toast('اتسجل في اليومية');}});
 }
 function openShopClose(){
   var J=journal();
@@ -918,20 +927,23 @@ function openShopClose(){
     submit:'قفل اليوم',danger:true,
     onSubmit:function(){
       var JJ=journal(),up=S.seq;
-      addEntry({type:'close',day:todayStr(),income:JJ.income,expenses:JJ.expenses,net:JJ.net,upTo:up});
+      addEntry({type:'close',day:todayStr(),income:JJ.income,expenses:JJ.expenses,net:JJ.net,netCash:JJ.netCash,netWallet:JJ.netWallet,upTo:up});
       toast('تم قفل اليوم');}});
 }
 function openCash(kind){
   var dep=kind==='deposit';
   openSheet({title:dep?'إيداع في الخزنة':'مصروف / سحب من الخزنة',fields:[
-    {name:'amount',label:'المبلغ',type:'money'},
+    {name:'amount',label:'المبلغ',type:'money'},paymentField(dep?'طريقة الإيداع':'طريقة السحب'),
     {name:'date',label:'التاريخ',type:'date'},
     {name:'note',label:dep?'المصدر (اختياري)':'البيان',type:'text',ph:dep?'مثال: رصيد افتتاحي':'مثال: إيجار، كهرباء'}],
     submit:'حفظ',
     onSubmit:function(v){
       var a=parseNum(v.amount);if(isNaN(a)||a<=0)return 'اكتب المبلغ بشكل صحيح.';
       if(!dep&&!v.note.trim())return 'اكتب البيان (المصروف على إيه).';
-      addEntry({type:dep?'deposit':'withdraw',amount:r2(a),ts:v.date,note:v.note.trim()});toast('تم التسجيل');}});
+      addEntry({type:dep?'deposit':'withdraw',amount:r2(a),method:v.method||'cash',ts:v.date,note:v.note.trim()});toast('تم التسجيل');}});
+}
+function openTransfer(){
+  openSheet({title:'تحويل بين أرصدة الخزنة',body:'التحويل لا يغيّر إجمالي أموالك؛ هو نقل رصيد من وسيلة إلى أخرى.',fields:[{name:'from',label:'من',type:'select',value:'cash',options:[{v:'cash',t:'الكاش / النقدية'},{v:'wallet',t:'المحفظة الإلكترونية'}]},{name:'amount',label:'المبلغ المحوّل',type:'money'},{name:'date',label:'التاريخ',type:'date'},{name:'note',label:'ملاحظة (اختياري)',type:'text'}],submit:'تأكيد التحويل',preview:function(v){var a=parseNum(v.amount),bal=v.from==='wallet'?calc().wallet:calc().cashOnHand;if(isNaN(a)||a<=0)return null;return {warn:a>bal,html:'الرصيد المتاح '+nv(bal)+'<br>الرصيد بعد التحويل '+nv(bal-a)};},onSubmit:function(v){var a=parseNum(v.amount),T=calc(),bal=v.from==='wallet'?T.wallet:T.cashOnHand;if(isNaN(a)||a<=0)return 'اكتب مبلغ صحيح.';if(a>bal+0.005)return 'المبلغ أكبر من الرصيد المتاح في المصدر.';addEntry({type:'transfer',from:v.from,amount:r2(a),ts:v.date,note:v.note.trim()});toast('تم التحويل بين الأرصدة');}});
 }
 function cancelEntry(id){
   var o=byId(id);if(!o||isLocked(o)){toast('الحركة دي مقفولة');ui.pending=null;return;}
@@ -939,13 +951,13 @@ function cancelEntry(id){
 }
 function countResult(){
   var el=document.getElementById('count'),res=document.getElementById('countRes');if(!el||!res)return;
-  var a=parseNum(el.value),T=calc();
+  var a=parseNum(el.value),T=calc(),m=(document.getElementById('countMethod')||{}).value||'cash',book=m==='wallet'?T.wallet:T.cashOnHand;
   if(isNaN(a)){res.className='note';res.innerHTML='اكتب المبلغ وهيظهر الفرق عن الرصيد المحسوب.';return;}
-  var d=r2(a-T.cash);
-  if(d===0){res.className='note';res.innerHTML='<span class="pill ok">مطابق</span> الفعلي يساوي المحسوب '+nv(T.cash);return;}
+  var d=r2(a-book);
+  if(d===0){res.className='note';res.innerHTML='<span class="pill ok">مطابق</span> الفعلي يساوي المحسوب '+nv(book);return;}
   res.className='';
   res.innerHTML='<div class="note" style="margin-top:0">المحسوب '+nv(T.cash)+' · الفعلي '+nv(a)+'</div><div style="font-weight:700" class="'+(d>0?'pos':'neg')+'">'+(d>0?'زيادة ':'عجز ')+nv(Math.abs(d))+'</div>'+
-    '<button class="btn block" style="margin-top:10px" data-act="count-apply">سجّل الفرق في الخزنة</button>';
+    '<button class="btn block" style="margin-top:10px" data-act="count-apply">سجّل الفرق في الرصيد</button>';
 }
 
 /* القفل */
@@ -991,7 +1003,7 @@ function toB64(s){var b=new TextEncoder().encode(s),bin='';b.forEach(function(x)
 function fromB64(t){var bin=atob(t),a=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new TextDecoder().decode(a);}
 function backupMeta(o){
   var dates=(o.entries||[]).map(function(e){return e.ts;}).filter(Boolean).sort();
-  return {format:'SH-TRADING-BACKUP',formatVersion:1,createdAt:new Date().toISOString(),appVersion:'2',counts:{suppliers:(o.suppliers||[]).length,parties:(o.parties||[]).length,entries:(o.entries||[]).length},dateRange:{from:dates[0]||null,to:dates[dates.length-1]||null}};
+  return {format:'SH-TRADING-BACKUP',formatVersion:1,createdAt:new Date().toISOString(),appVersion:'3',counts:{suppliers:(o.suppliers||[]).length,parties:(o.parties||[]).length,entries:(o.entries||[]).length},dateRange:{from:dates[0]||null,to:dates[dates.length-1]||null}};
 }
 function exportObj(){var o=JSON.parse(JSON.stringify(S));o.settings.pin=null;o.settings.lastBackup=null;o.backupMeta=backupMeta(o);return o;}
 function exportText(){return 'HSB1:'+toB64(JSON.stringify(exportObj()));}
@@ -1118,6 +1130,7 @@ document.addEventListener('click',function(ev){
     case 'shop-close':openShopClose();break;
     case 'new-deposit':openCash('deposit');break;
     case 'new-withdraw':openCash('withdraw');break;
+    case 'new-transfer':openTransfer();break;
     case 'rename-sup':openRename(S.suppliers,id,'تعديل اسم المورد');break;
     case 'rename-par':openRename(S.parties,id,'تعديل اسم العميل');break;
     case 'del-sup':
@@ -1135,8 +1148,8 @@ document.addEventListener('click',function(ev){
       if(inp){inp.value=el.getAttribute('data-v');updatePreview();}break;
     case 'sheet-close':closeSheet();break;
     case 'count-apply':
-      var act=parseNum(document.getElementById('count').value),T=calc();
-      if(!isNaN(act)){var d=r2(act-T.cash);if(d!==0){addEntry({type:'adjust',amount:d,note:'الفعلي '+fmt(act)+' والمحسوب '+fmt(T.cash)});toast('تم تسجيل الفرق');render();}}break;
+      var act=parseNum(document.getElementById('count').value),T=calc(),m=(document.getElementById('countMethod')||{}).value||'cash',book=m==='wallet'?T.wallet:T.cashOnHand;
+      if(!isNaN(act)){var d=r2(act-book);if(d!==0){addEntry({type:'adjust',amount:d,method:m,note:'الفعلي '+fmt(act)+' والمحسوب '+fmt(book)});toast('تم تسجيل الفرق');render();}}break;
     case 'backup':doBackup();break;
     case 'backup-file':backupFile();break;
     case 'restore':doRestore();break;
@@ -1149,10 +1162,11 @@ document.addEventListener('click',function(ev){
 });
 document.addEventListener('input',function(ev){
   if(ev.target.id==='q'){var q=ev.target.value.trim();document.querySelectorAll('.pc').forEach(function(c){c.hidden=q&&c.getAttribute('data-name').indexOf(q)<0;});}
-  else if(ev.target.id==='count')countResult();
+  else if(ev.target.id==='count'||ev.target.id==='countMethod')countResult();
   else if(sheet&&ev.target.closest&&ev.target.closest('#sheetForm'))updatePreview();
 });
 document.addEventListener('change',function(ev){
+  if(ev.target.id==='countMethod')countResult();
   if(ev.target.id==='rf'&&ev.target.files&&ev.target.files[0]){readBackupFile(ev.target.files[0]);ev.target.value='';}
 });
 document.addEventListener('submit',function(ev){
